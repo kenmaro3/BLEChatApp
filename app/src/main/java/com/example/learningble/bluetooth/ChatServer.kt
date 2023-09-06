@@ -81,9 +81,11 @@ object ChatServer {
     }
 
     fun sendMessage(message: String): Boolean {
-        // for debug without other device
-        Log.d("DEBUG", "will send")
-        _messages.postValue(Message.LocalMessage(message))
+
+//        // for debug without other device===========================
+//        Log.d("DEBUG", "will send")
+//        _messages.postValue(Message.LocalMessage(message))
+//        // for debug without other device===========================END
 
         messageCharacteristic?.let { characteristic ->
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
@@ -102,15 +104,16 @@ object ChatServer {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun sendImage(uri: Uri, context: Context): Boolean {
-        // for debug without other device
 
-        val byteArray: ByteArray? = context.contentResolver
-            .openInputStream(uri)
-            ?.use { it.readBytes() }
-
-        val messageBytes = byteArray!!
-        Log.d("DEBUG", "will send ${uri.toString()}")
-        _messages.postValue(Message.LocalImage(messageBytes.toBase64()))
+//        //// for debug without other device==================================
+//        val byteArray: ByteArray? = context.contentResolver
+//            .openInputStream(uri)
+//            ?.use { it.readBytes() }
+//
+//        val messageBytes = byteArray!!
+//        Log.d("DEBUG", "will send ${uri.toString()}")
+//        _messages.postValue(Message.LocalImage(messageBytes.toBase64()))
+//        //// for debug without other device==================================END
 
         messageCharacteristic?.let { characteristic ->
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
