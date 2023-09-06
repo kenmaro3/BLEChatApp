@@ -1,5 +1,12 @@
 package com.example.learningble.presentation
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Build
+import java.util.Base64
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -25,14 +32,41 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.Image
+import androidx.compose.material.LocalAbsoluteElevation
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
+import coil.compose.AsyncImage
+
 import com.example.learningble.bluetooth.ChatServer
 import com.example.learningble.models.Message
 
 private const val TAG = "ChatCompose"
 
+fun convertImageByteArrayToBitmap(imageData: ByteArray): Bitmap {
+    return BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
+}
+
+@Composable
+fun BitmapImage(bitmap: Bitmap) {
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = "some useful description",
+    )
+}
+@RequiresApi(Build.VERSION_CODES.O)
+fun ByteArray.toBase64(): String =
+    String(Base64.getEncoder().encode(this))
+
 object ChatCompose {
 
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @Composable
     fun ShowChat(message: Message) {
         Row(
@@ -41,19 +75,39 @@ object ChatCompose {
                 .fillMaxWidth(),
             horizontalArrangement = if (message is Message.RemoteMessage) Arrangement.Start else Arrangement.End
         ) {
-            Box(
-                modifier = Modifier
-                    .width(150.dp)
-                    .padding(5.dp)
-                    .border(1.dp, Color.Black, shape = RoundedCornerShape(10.dp))
-                    .background(
-                        if (message is Message.RemoteMessage) Color(0xFFD3D3D3) else Color(
-                            0xFF90EE90
-                        ),
-                        shape = RoundedCornerShape(10.dp)
-                    )
-            ) {
-                Text(text = message.text, color = Color.Black, modifier = Modifier.padding(10.dp))
+            if (message is Message.RemoteMessage || message is Message.LocalMessage){
+                Box(
+                    modifier = Modifier
+                        .width(150.dp)
+                        .padding(5.dp)
+                        .border(1.dp, Color.Black, shape = RoundedCornerShape(10.dp))
+                        .background(
+                            if (message is Message.RemoteMessage) Color(0xFFD3D3D3) else Color(
+                                0xFF90EE90
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                ) {
+                    Text(text = message.text, color = Color.Black, modifier = Modifier.padding(10.dp))
+                }
+            }else if(message is Message.RemoteImage || message is Message.LocalImage){
+                Box(
+                    modifier = Modifier
+                        .width(150.dp)
+                        .padding(5.dp)
+                        .border(1.dp, Color.Black, shape = RoundedCornerShape(10.dp))
+                        .background(
+                            if (message is Message.RemoteImage) Color(0xFFD3D3D3) else Color(
+                                0xFF90EE90
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                ) {
+                    val byteArray = Base64.getDecoder().decode(message.text)
+                    BitmapImage(convertImageByteArrayToBitmap(byteArray))
+                    //AsyncImage(model = uri, contentDescription = null, modifier = Modifier.size(248.dp))
+                }
+
             }
         }
     }
@@ -75,6 +129,7 @@ object ChatCompose {
 
 
         if (messageList.isNotEmpty()) {
+            Log.d("DEBUG1", messageList.toString())
             Column(modifier = Modifier.fillMaxSize()) {
                 Text(
                     text = "Chat Now with ${deviceName ?: "Unknown"}",
@@ -108,37 +163,65 @@ object ChatCompose {
 
     @Composable
     fun InputField(inputvalue: MutableState<TextFieldValue>){
+        var uri by remember{
+            mutableStateOf<Uri?>(null)
+        }
+
+        val context = LocalContext.current
+
+        val singlePhotoPicker = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia(),
+            onResult = {
+                uri = it
+            }
+        )
+
         Column(
             Modifier
                 .fillMaxWidth()
         ) {
 
-            TextField(
-                value = inputvalue.value,
-                onValueChange = {
-                    inputvalue.value = it
-                },
-                placeholder = { Text(text = "Enter your message") },
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.None,
-                    autoCorrect = true,
-                    keyboardType = KeyboardType.Text,
-                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                ),
-                textStyle = TextStyle(
-                    color = Color.Black, fontSize = TextUnit.Unspecified,
-                    fontFamily = FontFamily.SansSerif
-                ),
-                maxLines = 1,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(){
+                Button(onClick = {
+                    singlePhotoPicker.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+
+                }){
+                    Text("Image")
+                }
+
+                TextField(
+                    value = inputvalue.value,
+                    onValueChange = {
+                        inputvalue.value = it
+                    },
+                    placeholder = { Text(text = "Enter your message") },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        autoCorrect = true,
+                        keyboardType = KeyboardType.Text,
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                    ),
+                    textStyle = TextStyle(
+                        color = Color.Black, fontSize = TextUnit.Unspecified,
+                        fontFamily = FontFamily.SansSerif
+                    ),
+                    maxLines = 1,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             Button(
                 onClick = {
                     if (inputvalue.value.text.isNotEmpty()) {
                         ChatServer.sendMessage(inputvalue.value.text)
                         inputvalue.value = TextFieldValue()
+                    }else if(uri != null){
+                        Log.d("DEBUG", "here called")
+                        ChatServer.sendImage(uri!!, context)
+                        uri = null
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -158,4 +241,11 @@ object ChatCompose {
         }
     }
 
+}
+
+
+@Preview(name = "name")
+@Composable
+fun DefaultPreview() {
+    ChatCompose.Chats("test")
 }

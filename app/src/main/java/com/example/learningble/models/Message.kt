@@ -1,9 +1,13 @@
 package com.example.learningble.models
 
+import android.net.Uri
 
 sealed class Message(val text: String) {
     class RemoteMessage(text: String) : Message(text)
     class LocalMessage(text: String) : Message(text)
+
+    class RemoteImage(text: String) : Message(text)
+    class LocalImage(text: String) : Message(text)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) {

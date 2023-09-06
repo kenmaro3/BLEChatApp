@@ -8,14 +8,18 @@ import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.learningble.models.Message
+import com.example.learningble.presentation.toBase64
 import com.example.learningble.states.DeviceConnectionState
 import com.example.learningble.utils.MESSAGE_UUID
 import com.example.learningble.utils.SERVICE_UUID
@@ -77,6 +81,10 @@ object ChatServer {
     }
 
     fun sendMessage(message: String): Boolean {
+        // for debug without other device
+        Log.d("DEBUG", "will send")
+        _messages.postValue(Message.LocalMessage(message))
+
         messageCharacteristic?.let { characteristic ->
             characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
 
@@ -86,6 +94,36 @@ object ChatServer {
                 val success = it.writeCharacteristic(messageCharacteristic)
                 if (success) {
                     _messages.postValue(Message.LocalMessage(message))
+                }
+            }
+        }
+        return false
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun sendImage(uri: Uri, context: Context): Boolean {
+        // for debug without other device
+
+        val byteArray: ByteArray? = context.contentResolver
+            .openInputStream(uri)
+            ?.use { it.readBytes() }
+
+        val messageBytes = byteArray!!
+        Log.d("DEBUG", "will send ${uri.toString()}")
+        _messages.postValue(Message.LocalImage(messageBytes.toBase64()))
+
+        messageCharacteristic?.let { characteristic ->
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            val byteArray: ByteArray? = context.contentResolver
+                .openInputStream(uri)
+                ?.use { it.readBytes() }
+
+            val messageBytes = byteArray!!
+            characteristic.value = messageBytes
+            gatt?.let {
+                val success = it.writeCharacteristic(messageCharacteristic)
+                if (success) {
+                    _messages.postValue(Message.LocalImage(messageBytes.toBase64()))
                 }
             }
         }
@@ -184,6 +222,9 @@ object ChatServer {
             if (characteristic.uuid == MESSAGE_UUID) {
                 gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
                 val message = value?.toString(Charsets.UTF_8)
+
+                Log.d("DEBUG2", message!!)
+
                 message?.let {
                     _messages.postValue(Message.RemoteMessage(it))
                 }

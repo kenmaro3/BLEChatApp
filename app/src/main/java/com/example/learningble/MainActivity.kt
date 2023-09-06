@@ -120,17 +120,18 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize()
                         ) {
                             if (deviceScanningState != null && !isChatOpen || deviceConnectionState == DeviceConnectionState.Disconnected) {
-                                Column {
-                                    Text(
-                                        text = "Choose a device to chat with:",
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    DeviceScanCompose.DeviceScan(deviceScanViewState = deviceScanningState!!) {
-                                        isChatOpen = true
-                                    }
-                                }
+//                                Column {
+//                                    Text(
+//                                        text = "Choose a device to chat with:",
+//                                        fontSize = 20.sp,
+//                                        fontWeight = FontWeight.Bold
+//                                    )
+//                                    Spacer(modifier = Modifier.height(10.dp))
+//                                    DeviceScanCompose.DeviceScan(deviceScanViewState = deviceScanningState!!) {
+//                                        isChatOpen = true
+//                                    }
+//                                }
+                                ChatCompose.Chats("test device")
 
                             } else if (deviceScanningState != null && deviceConnectionState is DeviceConnectionState.Connected) {
                                 ChatCompose.Chats((deviceConnectionState as DeviceConnectionState.Connected).device.name)
